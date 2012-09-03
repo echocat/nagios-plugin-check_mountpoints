@@ -1,5 +1,5 @@
 #!/bin/bash
- 
+
 # --------------------------------------------------------------------
 # **** BEGIN LICENSE BLOCK *****
 #
@@ -23,7 +23,7 @@
 #
 # **** END LICENSE BLOCK *****
 # --------------------------------------------------------------------
- 
+
 # --------------------------------------------------------------------
 # Check if all specified nfs/cifs/davfs mounts exist and if they are correct implemented.
 # That means we check /etc/fstab, the mountpoints in the filesystem and if they
@@ -31,11 +31,13 @@
 # Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL 5 6, CentOS 5 6 and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
-# @version: 1.6
-# @date: 2012-08-17 17:21:14 CEST
+# @version: 1.7
+# @date: 2012-09-03 18:55:09 CEST
 #
+# changes 1.7
+#  - new flag -A to autoread mounts from fstab and return OK if no mounts found in fstab
 # changes 1.6
-#  - new flag -a to autoread mounts from fstab
+#  - new flag -a to autoread mounts from fstab and return UNKNOWN if no mounts found in fstab
 #  - no mountpoints given returns state UNKNOWN instead of critical now
 #  - parameter MTAB is used correctly on solaris now
 #  - fix some minor bugs in the way variables were used
@@ -55,27 +57,29 @@
 # changes 1.0
 #  - support for solaris
 # --------------------------------------------------------------------
- 
- 
+
+
 # --------------------------------------------------------------------
 # configuration
 # --------------------------------------------------------------------
 PROGNAME=$(basename $0)
 ERR_MESG=()
 LOGGER="`which logger` -i -p kern.warn -t"
+
 AUTO=0
- 
+AUTOIGNORE=0
+
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin"
 LIBEXEC="/usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
- 
+
 if [ -z "$STATE_OK" ]; then
   echo "nagios utils.sh not found" &>/dev/stderr
   exit 1
 fi
- 
+
 # For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
 FSF=3
 MF=2
@@ -84,17 +88,17 @@ MTAB=/proc/mounts
 # Time in seconds after which the check asumes that an NFS mounts is staled, if
 # it do not respons. (default: 3)
 TIME_TILL_STALE=3
- 
+
 # --------------------------------------------------------------------
- 
- 
+
+
 # --------------------------------------------------------------------
 # functions
 # --------------------------------------------------------------------
 function log() {
         $LOGGER ${PROGNAME} "$@";
 }
- 
+
 function usage() {
         echo "Usage: $PROGNAME [-m FILE] \$mountpoint [\$mountpoint2 ...]"
         echo "Usage: $PROGNAME -h,--help"
@@ -105,9 +109,10 @@ function usage() {
         echo " -M NUMBER   Mount Field number in fstab (default: 2)"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: 3)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
-	echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
+        echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
+        echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
- 
+
 function print_help() {
         echo ""
         usage
@@ -120,20 +125,21 @@ function print_help() {
         echo ""
         echo "For contact info, read the plugin itself..."
 }
- 
+
 # --------------------------------------------------------------------
 # startup checks
 # --------------------------------------------------------------------
- 
+
 if [ $# -eq 0 ]; then
         usage
         exit $STATE_CRITICAL
 fi
- 
+
 while [ "$1" != "" ]
 do
         case "$1" in
-		-a) AUTO=1; shift;;
+                -a) AUTO=1; shift;;
+                -A) AUTO=1; AUTOIGNORE=1; shift;;
                 --help) print_help; exit $STATE_OK;;
                 -h) print_help; exit $STATE_OK;;
                 -m) MTAB=$2; shift 2;;
@@ -147,28 +153,31 @@ do
 done
 
 if [ ${AUTO} -eq 1 ]; then
-	MPS=`grep -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`grep -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
-if [ -z "${MPS}" ]; then
-	log "ERROR: no mountpoints to given!"
-	echo "ERROR: no mountpoints to given!"
-	usage
-	exit $STATE_UNKNOWN
+if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
+		echo "OK: no external mounts were found in ${FSTAB}"
+		exit $STATE_OK
+elif [ -z "${MPS}"  ]; then
+        log "ERROR: no mountpoints given!"
+        echo "ERROR: no mountpoints given!"
+        usage
+        exit $STATE_UNKNOWN
 fi
 
-if [ ! -f /proc/mounts -a ${MTAB} == /proc/mounts ]; then
+if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
         log "WARN: /proc wasn't mounted!"
         mount -t proc proc /proc
         ERR_MESG[${#ERR_MESG[*]}]="WARN: mounted /proc $?"
 fi
- 
+
 if [ ! -f "${MTAB}" ]; then
         log "WARN: ${MTAB} don't exist!"
         echo "WARN: ${MTAB} don't exist!"
         exit $STATE_CRITICAL
 fi
- 
+
 # --------------------------------------------------------------------
 # now we check if the given parameters ...
 #  1) ... exist in the /etc/fstab
@@ -178,7 +187,7 @@ fi
 # --------------------------------------------------------------------
 for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
-	## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
+        ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 ]; then
                 awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | grep -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
@@ -186,14 +195,14 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in fstab ${FSTAB}"
                 fi
         fi
- 
+
         ## check kernel mounts
         grep -q -E " ${MP} (nfs|nfs4|davfs|cifs|fuse|simfs) " ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
                 log "WARN: ${MP} isn't mounted"
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
         fi
- 
+
         ## check if it stales
         df -k ${MP} &>/dev/null &
         DFPID=$!
@@ -214,9 +223,9 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in filesystem"
                 fi
         fi
- 
+
 done
- 
+
 if [ ${#ERR_MESG[*]} -ne 0 ]; then
         echo -n "CRITICAL: "
         for element in "${ERR_MESG[@]}"; do
@@ -225,6 +234,6 @@ if [ ${#ERR_MESG[*]} -ne 0 ]; then
         echo
         exit $STATE_CRITICAL
 fi
- 
+
 echo "OK: all mounts were found (${MPS})"
 exit $STATE_OK
