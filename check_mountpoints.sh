@@ -69,8 +69,8 @@ LOGGER="`which logger` -i -p kern.warn -t"
 AUTO=0
 AUTOIGNORE=0
 
-export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin"
-LIBEXEC="/usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
+export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
+LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
@@ -80,11 +80,23 @@ if [ -z "$STATE_OK" ]; then
   exit 1
 fi
 
-# For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
-FSF=3
-MF=2
-FSTAB=/etc/fstab
-MTAB=/proc/mounts
+KERNEL=`uname -s`
+case $KERNEL in 
+  # For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
+  SunOS) FSF=4
+         MF=3
+         FSTAB=/etc/vfstab
+         MTAB=/etc/mnttab
+         GREP=ggrep
+         ;;
+  *)     FSF=3
+         MF=2
+         FSTAB=/etc/fstab
+         MTAB=/proc/mounts
+         GREP=grep
+         ;;
+esac
+
 # Time in seconds after which the check asumes that an NFS mounts is staled, if
 # it do not respons. (default: 3)
 TIME_TILL_STALE=3
@@ -153,7 +165,7 @@ do
 done
 
 if [ ${AUTO} -eq 1 ]; then
-        MPS=`grep -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -189,7 +201,7 @@ for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 ]; then
-                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | grep -q ${MP} &>/dev/null
+                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
                         log "WARN: ${MP} don't exists in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in fstab ${FSTAB}"
@@ -197,7 +209,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check kernel mounts
-        grep -q -E " ${MP} (nfs|nfs4|davfs|cifs|fuse|simfs) " ${MTAB} &>/dev/null
+        ${GREP} -q -E "\W${MP}\W(nfs|nfs4|davfs|cifs|fuse|simfs)\W" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
                 log "WARN: ${MP} isn't mounted"
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
