@@ -31,9 +31,12 @@
 # Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL 5 6, CentOS 5 6 and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
-# @version: 1.7
-# @date: 2012-09-03 18:55:09 CEST
+# @version: 1.8
+# @date: 2012-09-29 07:15:35 CEST
 #
+# changes 1.8
+#  - fiexes for solaris support
+#  - improved usage text
 # changes 1.7
 #  - new flag -A to autoread mounts from fstab and return OK if no mounts found in fstab
 # changes 1.6
@@ -115,11 +118,11 @@ function usage() {
         echo "Usage: $PROGNAME [-m FILE] \$mountpoint [\$mountpoint2 ...]"
         echo "Usage: $PROGNAME -h,--help"
         echo "Options:"
-        echo " -m FILE   Use this mtab instead (default: /proc/mounts)"
-        echo " -f FILE   Use this fstab instead (default: /etc/fstab)"
-        echo " -N NUMBER   FS Field number in fstab (default: 3)"
-        echo " -M NUMBER   Mount Field number in fstab (default: 2)"
-        echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: 3)"
+        echo " -m FILE   Use this mtab instead (default: ${MTAB})"
+        echo " -f FILE   Use this fstab instead (default: ${FSTAB})"
+        echo " -N NUMBER   FS Field number in fstab (default: ${FSF})"
+        echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
+        echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
@@ -129,7 +132,7 @@ function print_help() {
         echo ""
         usage
         echo ""
-        echo "Check if nfs/cifs mountpoints are correct implemented and mounted."
+        echo "Check if nfs/cifs/davfs mountpoints are correct implemented and mounted."
         echo ""
         echo "This plugin is NOT developped by the Nagios Plugin group."
         echo "Please do not e-mail them for support on this plugin, since"
