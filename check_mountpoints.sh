@@ -71,6 +71,7 @@ LOGGER="`which logger` -i -p kern.warn -t"
 
 AUTO=0
 AUTOIGNORE=0
+IGNOREFSTAB=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
 LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
@@ -123,6 +124,7 @@ function usage() {
         echo " -N NUMBER   FS Field number in fstab (default: ${FSF})"
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
+        echo " -i          Ignore fstab. Don't fail just because mount isn't in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
@@ -162,6 +164,7 @@ do
                 -N) FSF=$2; shift 2;;
                 -M) MF=$2; shift 2;;
                 -T) TIME_TILL_STALE=$2; shift 2;;
+                -i) IGNOREFSTAB=1; shift;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -203,7 +206,7 @@ fi
 for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
-        if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 ]; then
+        if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
                 awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
                         log "WARN: ${MP} don't exists in /etc/fstab"
