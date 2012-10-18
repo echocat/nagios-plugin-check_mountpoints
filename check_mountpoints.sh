@@ -31,9 +31,11 @@
 # Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL 5 6, CentOS 5 6 and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
-# @version: 1.8
-# @date: 2012-09-29 07:15:35 CEST
+# @version: 1.9
+# @date: 2012-10-18 19:39:21 CEST
 #
+# changes 1.9
+#  - new flag -i disable check of fstab (if you use automount etc.)
 # changes 1.8
 #  - fiexes for solaris support
 #  - improved usage text
