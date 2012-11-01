@@ -189,14 +189,14 @@ elif [ -z "${MPS}"  ]; then
 fi
 
 if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
-        log "WARN: /proc wasn't mounted!"
+        log "CRIT: /proc wasn't mounted!"
         mount -t proc proc /proc
-        ERR_MESG[${#ERR_MESG[*]}]="WARN: mounted /proc $?"
+        ERR_MESG[${#ERR_MESG[*]}]="CRIT: mounted /proc $?"
 fi
 
 if [ ! -f "${MTAB}" ]; then
-        log "WARN: ${MTAB} don't exist!"
-        echo "WARN: ${MTAB} don't exist!"
+        log "CRIT: ${MTAB} don't exist!"
+        echo "CRIT: ${MTAB} don't exist!"
         exit $STATE_CRITICAL
 fi
 
@@ -213,7 +213,7 @@ for MP in ${MPS} ; do
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
                 awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
-                        log "WARN: ${MP} don't exists in /etc/fstab"
+                        log "CRIT: ${MP} don't exists in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in fstab ${FSTAB}"
                 fi
         fi
@@ -221,7 +221,7 @@ for MP in ${MPS} ; do
         ## check kernel mounts
         ${GREP} -q -E "\W${MP}\W(nfs|nfs4|davfs|cifs|fuse|simfs)\W" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
-                log "WARN: ${MP} isn't mounted"
+                log "CRIT: ${MP} isn't mounted"
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
         fi
 
@@ -241,14 +241,14 @@ for MP in ${MPS} ; do
         else
         ## if it not stales, check if it is a directory
                 if [ ! -d ${MP} ]; then
-                        log "WARN: ${MP} don't exists in filesystem"
+                        log "CRIT: ${MP} don't exists in filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
                         TOUCHFILE=${MP}/mount_test_from_$(hostname)
                         touch ${TOUCHFILE} &>/dev/null
                         if [ $? -ne 0 ]; then
-                                log "WARN: ${TOUCHFILE} is not writable."
+                                log "CRIT: ${TOUCHFILE} is not writable."
                                 ERR_MESG[${#ERR_MESG[*]}]="${TOUCHFILE} is not writable."
                         fi
                 fi
