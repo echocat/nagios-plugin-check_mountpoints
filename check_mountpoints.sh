@@ -74,6 +74,7 @@ LOGGER="`which logger` -i -p kern.warn -t"
 AUTO=0
 AUTOIGNORE=0
 IGNOREFSTAB=0
+WRITETEST=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
 LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
@@ -167,6 +168,7 @@ do
                 -M) MF=$2; shift 2;;
                 -T) TIME_TILL_STALE=$2; shift 2;;
                 -i) IGNOREFSTAB=1; shift;;
+                -w) WRITETEST=1; shift;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -241,6 +243,14 @@ for MP in ${MPS} ; do
                 if [ ! -d ${MP} ]; then
                         log "WARN: ${MP} don't exists in filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in filesystem"
+                elif [ ${WRITETEST} -eq 1 ]; then
+                ## if wanted, check if it is writable
+                        TOUCHFILE=${MP}/mount_test_from_$(hostname)
+                        touch ${TOUCHFILE} &>/dev/null
+                        if [ $? -ne 0 ]; then
+                                log "WARN: ${TOUCHFILE} is not writable."
+                                ERR_MESG[${#ERR_MESG[*]}]="${TOUCHFILE} is not writable."
+                        fi
                 fi
         fi
 
