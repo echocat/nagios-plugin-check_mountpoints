@@ -31,9 +31,13 @@
 # Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL 5 6, CentOS 5 6 and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
-# @version: 1.9
-# @date: 2012-10-18 19:39:21 CEST
+# @projectsite: https://github.com/dwerder/nagios-plugin-check_mountpoints
+# @version: 1.20
+# @date: 2012-11-08 15:36:12 CEST
 #
+# changes 1.20
+#  - new flag -w results in a write test on the mountpoint
+#  - kernel logger logs CRITICAL check results now as CRIT 
 # changes 1.9
 #  - new flag -i disable check of fstab (if you use automount etc.)
 # changes 1.8
@@ -206,6 +210,7 @@ fi
 #  2) ... are mounted
 #  3) ... df -k gives no stale
 #  4) ... exist on the filesystem
+#  5) ... is writable (optional)
 # --------------------------------------------------------------------
 for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
@@ -245,7 +250,7 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
-                        TOUCHFILE=${MP}/mount_test_from_$(hostname)
+                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)
                         touch ${TOUCHFILE} &>/dev/null
                         if [ $? -ne 0 ]; then
                                 log "CRIT: ${TOUCHFILE} is not writable."
