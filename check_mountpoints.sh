@@ -134,7 +134,7 @@ function usage() {
         echo " -i          Ignore fstab. Don't fail just because mount isn't in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
-        echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_$(hostname) (default: unset)"
+        echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
 
