@@ -35,7 +35,7 @@
 # @version: 1.20
 # @date: 2012-11-08 15:36:12 CEST
 #
-# changes 1.20
+# changes 1.10
 #  - new flag -w results in a write test on the mountpoint
 #  - kernel logger logs CRITICAL check results now as CRIT 
 # changes 1.9
