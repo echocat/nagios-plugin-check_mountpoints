@@ -3,23 +3,13 @@
 # --------------------------------------------------------------------
 # **** BEGIN LICENSE BLOCK *****
 #
-# Version: MPL 1.1
+# Version: MPL 2.0
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
+# echocat check_mountpoints.sh, Copyright (c) 2011-2012 echocat
 #
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
-# The Original Code is echocat management.
-#
-# The Initial Developer of the Original Code is Daniel Werdermann.
-# Portions created by the Initial Developer are Copyright (C) 2011
-# the Initial Developer. All Rights Reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # **** END LICENSE BLOCK *****
 # --------------------------------------------------------------------
@@ -31,10 +21,12 @@
 # Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL 5 6, CentOS 5 6 and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
-# @projectsite: https://github.com/dwerder/nagios-plugin-check_mountpoints
-# @version: 1.20
-# @date: 2012-11-08 15:36:12 CEST
+# @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
+# @version: 1.11
+# @date: 2012-12-30 14:23:36 CEST
 #
+# changes 1.11
+#  - just update license information
 # changes 1.10
 #  - new flag -w results in a write test on the mountpoint
 #  - kernel logger logs CRITICAL check results now as CRIT 
