@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.11
-# @date: 2012-12-30 14:23:36 CEST
+# @version: 1.12
+# @date: 2013-04-25 10:42:13 CEST
 #
+# changes 1.12
+#  - add LIBEXEC path for OpenCSW-installed nagios in Solaris
 # changes 1.11
 #  - just update license information
 # changes 1.10
@@ -73,7 +75,7 @@ IGNOREFSTAB=0
 WRITETEST=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
-LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec"
+LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
