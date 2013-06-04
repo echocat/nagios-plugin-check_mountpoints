@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.12
-# @date: 2013-04-25 10:42:13 CEST
+# @version: 1.13
+# @date: 2013-06-04 12:46:16 CEST
 #
+# changes 1.13
+#  - add support for clusterfs
 # changes 1.12
 #  - add LIBEXEC path for OpenCSW-installed nagios in Solaris
 # changes 1.11
