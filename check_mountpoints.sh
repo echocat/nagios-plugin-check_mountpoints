@@ -174,7 +174,7 @@ do
 done
 
 if [ ${AUTO} -eq 1 ]; then
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs"){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -211,7 +211,7 @@ for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
-                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
+                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
                         log "CRIT: ${MP} don't exists in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in fstab ${FSTAB}"
@@ -219,7 +219,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check kernel mounts
-        ${GREP} -q -E "\W${MP}\W(nfs|nfs4|davfs|cifs|fuse|simfs)\W" ${MTAB} &>/dev/null
+        ${GREP} -q -E "\W${MP}\W(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)\W" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
                 log "CRIT: ${MP} isn't mounted"
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
