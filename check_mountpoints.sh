@@ -26,7 +26,7 @@
 # @date: 2013-06-04 12:46:16 CEST
 #
 # changes 1.13
-#  - add support for clusterfs
+#  - add support for glusterfs
 # changes 1.12
 #  - add LIBEXEC path for OpenCSW-installed nagios in Solaris
 # changes 1.11
