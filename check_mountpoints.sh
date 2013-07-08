@@ -22,9 +22,12 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.13
-# @date: 2013-06-04 12:46:16 CEST
+# @version: 1.14
+# @date: 2013-07-08 09:12:10 CEST
 #
+# changes 1.14
+#  - better support for HP-UX, Icinga
+#  - cleanup writecheck file after check
 # changes 1.13
 #  - add support for glusterfs
 # changes 1.12
@@ -77,7 +80,7 @@ IGNOREFSTAB=0
 WRITETEST=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
-LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins"
+LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
@@ -95,6 +98,12 @@ case $KERNEL in
          FSTAB=/etc/vfstab
          MTAB=/etc/mnttab
          GREP=ggrep
+         ;;
+  HP-UX) FSF=3
+         MF=2
+         FSTAB=/etc/fstab
+         MTAB=/dev/mnttab
+         GREP=grep
          ;;
   *)     FSF=3
          MF=2
@@ -195,7 +204,7 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
         ERR_MESG[${#ERR_MESG[*]}]="CRIT: mounted /proc $?"
 fi
 
-if [ ! -f "${MTAB}" ]; then
+if [ ! -e "${MTAB}" ]; then
         log "CRIT: ${MTAB} don't exist!"
         echo "CRIT: ${MTAB} don't exist!"
         exit $STATE_CRITICAL
@@ -221,7 +230,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check kernel mounts
-        ${GREP} -q -E "\W${MP}\W(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)\W" ${MTAB} &>/dev/null
+        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
                 log "CRIT: ${MP} isn't mounted"
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
@@ -252,6 +261,8 @@ for MP in ${MPS} ; do
                         if [ $? -ne 0 ]; then
                                 log "CRIT: ${TOUCHFILE} is not writable."
                                 ERR_MESG[${#ERR_MESG[*]}]="${TOUCHFILE} is not writable."
+                        else
+                                rm ${TOUCHFILE} &>/dev/null
                         fi
                 fi
         fi
