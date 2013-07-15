@@ -179,6 +179,7 @@ do
                 -T) TIME_TILL_STALE=$2; shift 2;;
                 -i) IGNOREFSTAB=1; shift;;
                 -w) WRITETEST=1; shift;;
+                -L) LINKOK=1; shift;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -232,8 +233,11 @@ for MP in ${MPS} ; do
         ## check kernel mounts
         ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
-                log "CRIT: ${MP} isn't mounted"
-                ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
+        ## if a softlink is not an adequate replacement
+        	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
+                	log "CRIT: ${MP} isn't mounted"
+                	ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
+                fi
         fi
 
         ## check if it stales
