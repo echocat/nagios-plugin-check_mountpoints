@@ -136,6 +136,7 @@ function usage() {
         echo " -N NUMBER   FS Field number in fstab (default: ${FSF})"
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
+        echo " -L          Allow softlinks to be accepted instead of mount points"
         echo " -i          Ignore fstab. Don't fail just because mount isn't in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
@@ -179,6 +180,7 @@ do
                 -T) TIME_TILL_STALE=$2; shift 2;;
                 -i) IGNOREFSTAB=1; shift;;
                 -w) WRITETEST=1; shift;;
+                -L) LINKOK=1; shift;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -232,8 +234,11 @@ for MP in ${MPS} ; do
         ## check kernel mounts
         ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)" ${MTAB} &>/dev/null
         if [ $? -ne 0 ]; then
-                log "CRIT: ${MP} isn't mounted"
-                ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
+        ## if a softlink is not an adequate replacement
+        	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
+                	log "CRIT: ${MP} isn't mounted"
+                	ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
+                fi
         fi
 
         ## check if it stales
