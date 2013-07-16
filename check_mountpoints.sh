@@ -136,6 +136,7 @@ function usage() {
         echo " -N NUMBER   FS Field number in fstab (default: ${FSF})"
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
+        echo " -L          Allow softlinks to be accepted instead of mount points"
         echo " -i          Ignore fstab. Don't fail just because mount isn't in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
