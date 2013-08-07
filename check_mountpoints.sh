@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.14
-# @date: 2013-07-08 09:12:10 CEST
+# @version: 1.15
+# @date: 2013-08-07 16:56:34 CEST
 #
+# changes 1.15
+#  - fix bad bug in MTAB check
 # changes 1.14
 #  - better support for HP-UX, Icinga
 #  - cleanup writecheck file after check
@@ -232,7 +234,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check kernel mounts
-        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)" ${MTAB} &>/dev/null
+        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs)" &>/dev/null
         if [ $? -ne 0 ]; then
         ## if a softlink is not an adequate replacement
         	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
