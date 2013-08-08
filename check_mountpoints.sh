@@ -25,6 +25,8 @@
 # @version: 1.15
 # @date: 2013-08-07 16:56:34 CEST
 #
+# changes 1.16
+#  - minor English fixes
 # changes 1.15
 #  - fix bad bug in MTAB check
 # changes 1.14
@@ -115,8 +117,8 @@ case $KERNEL in
          ;;
 esac
 
-# Time in seconds after which the check asumes that an NFS mounts is staled, if
-# it do not respons. (default: 3)
+# Time in seconds after which the check assumes that an NFS mount is staled, if
+# it does not respond. (default: 3)
 TIME_TILL_STALE=3
 
 # --------------------------------------------------------------------
@@ -150,7 +152,7 @@ function print_help() {
         echo ""
         usage
         echo ""
-        echo "Check if nfs/cifs/davfs mountpoints are correct implemented and mounted."
+        echo "Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted."
         echo ""
         echo "This plugin is NOT developped by the Nagios Plugin group."
         echo "Please do not e-mail them for support on this plugin, since"
@@ -209,8 +211,8 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
 fi
 
 if [ ! -e "${MTAB}" ]; then
-        log "CRIT: ${MTAB} don't exist!"
-        echo "CRIT: ${MTAB} don't exist!"
+        log "CRIT: ${MTAB} doesn't exist!"
+        echo "CRIT: ${MTAB} doesn't exist!"
         exit $STATE_CRITICAL
 fi
 
@@ -228,8 +230,8 @@ for MP in ${MPS} ; do
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
                 awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
-                        log "CRIT: ${MP} don't exists in /etc/fstab"
-                        ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in fstab ${FSTAB}"
+                        log "CRIT: ${MP} doesn't exist in /etc/fstab"
+                        ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist in fstab ${FSTAB}"
                 fi
         fi
 
@@ -255,12 +257,12 @@ for MP in ${MPS} ; do
         done
         if ps -p $DFPID > /dev/null ; then
                 $(kill -s SIGTERM $DFPID &>/dev/null)
-                ERR_MESG[${#ERR_MESG[*]}]="${MP} doesnt response in $TIME_TILL_STALE sec. Seems to stale."
+                ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
         else
         ## if it not stales, check if it is a directory
                 if [ ! -d ${MP} ]; then
-                        log "CRIT: ${MP} don't exists in filesystem"
-                        ERR_MESG[${#ERR_MESG[*]}]="${MP} don't exists in filesystem"
+                        log "CRIT: ${MP} doesn't exist on filesystem"
+                        ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
                         TOUCHFILE=${MP}/.mount_test_from_$(hostname)
