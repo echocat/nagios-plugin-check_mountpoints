@@ -141,7 +141,7 @@ function usage() {
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
         echo " -L          Allow softlinks to be accepted instead of mount points"
-        echo " -i          Ignore fstab. Don't fail just because mount isn't in fstab. (default: unset)"
+        echo " -i          Ignore fstab. Don't fail just because mount is not in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
         echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
@@ -240,8 +240,8 @@ for MP in ${MPS} ; do
         if [ $? -ne 0 ]; then
         ## if a softlink is not an adequate replacement
         	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
-                	log "CRIT: ${MP} isn't mounted"
-                	ERR_MESG[${#ERR_MESG[*]}]="${MP} isn't mounted"
+                	log "CRIT: ${MP} is not mounted"
+                	ERR_MESG[${#ERR_MESG[*]}]="${MP} is not mounted"
                 fi
         fi
 
