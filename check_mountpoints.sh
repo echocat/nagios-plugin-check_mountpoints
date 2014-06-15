@@ -268,10 +268,19 @@ for MP in ${MPS} ; do
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
                         TOUCHFILE=${MP}/.mount_test_from_$(hostname)
-                        touch ${TOUCHFILE} &>/dev/null
-                        if [ $? -ne 0 ]; then
+                        touch ${TOUCHFILE} &>/dev/null &
+                        TOUCHPID=$!
+                        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
+                                if ps -p $TOUCHPID > /dev/null ; then
+                                        sleep 1
+                                else
+                                        break
+                                fi
+                        done
+                        if ps -p $TOUCHPID > /dev/null ; then
+                                $(kill -s SIGTERM $TOUCHPID &>/dev/null)
                                 log "CRIT: ${TOUCHFILE} is not writable."
-                                ERR_MESG[${#ERR_MESG[*]}]="${TOUCHFILE} is not writable."
+                                ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
                         else
                                 rm ${TOUCHFILE} &>/dev/null
                         fi
