@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.15
-# @date: 2013-08-07 16:56:34 CEST
+# @version: 1.16
+# @date: 2014-06-16 15:42:12 CEST
 #
+# changes 1.18
+#  - write check respects stale timeout now
 # changes 1.17
 #  - add support for ocfs2
 # changes 1.16
