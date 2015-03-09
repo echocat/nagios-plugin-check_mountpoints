@@ -25,6 +25,8 @@
 # @version: 1.16
 # @date: 2014-06-16 15:42:12 CEST
 #
+# changes 1.19
+#  - for write test, use filename, which is less prone to race conditions
 # changes 1.18
 #  - write check respects stale timeout now
 # changes 1.17
@@ -269,7 +271,7 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
-                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)
+                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
                         touch ${TOUCHFILE} &>/dev/null &
                         TOUCHPID=$!
                         for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
