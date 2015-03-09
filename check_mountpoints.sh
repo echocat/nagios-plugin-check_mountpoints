@@ -22,8 +22,8 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.16
-# @date: 2014-06-16 15:42:12 CEST
+# @version: 1.19
+# @date: 2015-03-09 12:56:12 CEST
 #
 # changes 1.19
 #  - for write test, use filename, which is less prone to race conditions
