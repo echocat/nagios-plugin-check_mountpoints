@@ -286,7 +286,12 @@ for MP in ${MPS} ; do
                                 log "CRIT: ${TOUCHFILE} is not writable."
                                 ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
                         else
-                                rm ${TOUCHFILE} &>/dev/null
+                        	if [ ! -f ${TOUCHFILE} ]; then
+                        		log "CRIT: ${TOUCHFILE} is not writable."
+                                	ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."	
+                        	else
+                                	rm ${TOUCHFILE} &>/dev/null
+                                fi
                         fi
                 fi
         fi
