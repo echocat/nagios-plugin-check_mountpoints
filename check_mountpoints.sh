@@ -199,7 +199,7 @@ do
 done
 
 if [ ${AUTO} -eq 1 ]; then
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2"){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -236,7 +236,7 @@ for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
-                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
+                awk '{if ($'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
                 if [ $? -ne 0 ]; then
                         log "CRIT: ${MP} doesn't exist in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist in fstab ${FSTAB}"
@@ -244,7 +244,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check kernel mounts
-        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs|ocfs2)" &>/dev/null
+        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs|ocfs2|lustre)" &>/dev/null
         if [ $? -ne 0 ]; then
         ## if a softlink is not an adequate replacement
         	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
