@@ -5,7 +5,7 @@
 #
 # Version: MPL 2.0
 #
-# echocat check_mountpoints.sh, Copyright (c) 2011-2012 echocat
+# echocat check_mountpoints.sh, Copyright (c) 2011-2015 echocat
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.20
-# @date: 2015-05-04 09:28:53 CEST
+# @version: 1.21
+# @date: 2015-07-21 15:31:12 CEST
 #
+# changes 1.21
+#  - add support for lustre fs
 # changes 1.20
 #  - better check on write test
 # changes 1.19
