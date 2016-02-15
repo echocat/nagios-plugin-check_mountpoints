@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 1.21
-# @date: 2015-07-21 15:31:12 CEST
+# @version: 1.22
+# @date: 2016-02-15 20:46:41 CEST
 #
+# changes 1.22
+#  - add support for ext3, ext4, auto
 # changes 1.21
 #  - add support for lustre fs
 # changes 1.20
