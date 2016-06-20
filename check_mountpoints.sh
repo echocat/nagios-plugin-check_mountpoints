@@ -240,16 +240,14 @@ for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
         if [ ! -f /proc/vz/veinfo -a ${AUTO} -ne 1 -a ${IGNOREFSTAB} -ne 1 ]; then
-                awk '{if ($'${FSF}'=="ext3" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"){print $'${MF}'}}' ${FSTAB} | ${GREP} -q ${MP} &>/dev/null
-                if [ $? -ne 0 ]; then
+                if [ -z "$( awk '{if ($'${MF}' == "'${MP}'" && ($'${FSF}'=="ext3" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre")){print $'${MF}'}}' ${FSTAB} )" ]; then
                         log "CRIT: ${MP} doesn't exist in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist in fstab ${FSTAB}"
                 fi
         fi
 
         ## check kernel mounts
-        ${GREP} "${MP}" ${MTAB} | ${GREP} -q -E "(ext3|auto|ext4|nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs|ocfs2|lustre)" &>/dev/null
-        if [ $? -ne 0 ]; then
+        if [ -z "$( ${GREP} -q -E "(ext3|auto|ext4|nfs|nfs4|davfs|cifs|fuse|simfs|glusterfs|ocfs2|lustre)" "${MTAB}" | awk '$'${MF}' == "'${MP}'" {print $'${MF}'}' )" ]; then
         ## if a softlink is not an adequate replacement
         	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
                 	log "CRIT: ${MP} is not mounted"
