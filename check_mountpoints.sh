@@ -94,6 +94,8 @@ AUTO=0
 AUTOIGNORE=0
 IGNOREFSTAB=0
 WRITETEST=0
+NOAUTOCOND=1
+NOAUTOIGNORE=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
 LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins"
@@ -111,18 +113,24 @@ case $KERNEL in
   # For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
   SunOS) FSF=4
          MF=3
+         OF=6
+         NOAUTOSTR=no
          FSTAB=/etc/vfstab
          MTAB=/etc/mnttab
          GREP=ggrep
          ;;
   HP-UX) FSF=3
          MF=2
+         OF=4
+         NOAUTOSTR=noauto
          FSTAB=/etc/fstab
          MTAB=/dev/mnttab
          GREP=grep
          ;;
   *)     FSF=3
          MF=2
+         OF=4
+         NOAUTOSTR=noauto
          FSTAB=/etc/fstab
          MTAB=/proc/mounts
          GREP=grep
@@ -151,11 +159,13 @@ function usage() {
         echo " -f FILE     Use this fstab instead (default: ${FSTAB})"
         echo " -N NUMBER   FS Field number in fstab (default: ${FSF})"
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
+        echo " -O NUMBER   Option Field number in fstab (default: ${OF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
         echo " -L          Allow softlinks to be accepted instead of mount points"
         echo " -i          Ignore fstab. Do not fail just because mount is not in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
+        echo " -o          When autoselecting mounts from fstab, ignore mounts having noauto flag. (default: unset)"
         echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
@@ -187,12 +197,14 @@ do
         case "$1" in
                 -a) AUTO=1; shift;;
                 -A) AUTO=1; AUTOIGNORE=1; shift;;
+                -o) NOAUTOIGNORE=1; shift;;
                 --help) print_help; exit $STATE_OK;;
                 -h) print_help; exit $STATE_OK;;
                 -m) MTAB=$2; shift 2;;
                 -f) FSTAB=$2; shift 2;;
                 -N) FSF=$2; shift 2;;
                 -M) MF=$2; shift 2;;
+                -O) OF=$2; shift 2;;
                 -T) TIME_TILL_STALE=$2; shift 2;;
                 -i) IGNOREFSTAB=1; shift;;
                 -w) WRITETEST=1; shift;;
@@ -203,7 +215,10 @@ do
 done
 
 if [ ${AUTO} -eq 1 ]; then
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ($'${FSF}'=="ext3" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"){print $'${MF}' }}' | tr '\n' ' '`
+        if [ ${NOAUTOIGNORE} -eq 1 ]; then
+                 NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
+        fi
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre")){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
