@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # --------------------------------------------------------------------
 # **** BEGIN LICENSE BLOCK *****
@@ -98,7 +98,7 @@ NOAUTOCOND=1
 NOAUTOIGNORE=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
-LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins"
+LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins /usr/local/libexec/nagios/"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
@@ -127,6 +127,14 @@ case $KERNEL in
          MTAB=/dev/mnttab
          GREP=grep
          ;;
+  FreeBSD) FSF=3
+         MF=2
+         OF=4
+         NOAUTOSTR=noauto
+         FSTAB=/etc/fstab
+         MTAB=none
+         GREP=grep
+	 ;; 
   *)     FSF=3
          MF=2
          OF=4
@@ -183,6 +191,18 @@ function print_help() {
         echo "For contact info, read the plugin itself..."
 }
 
+# Create a temporary mtab systems that don't have such a file
+# Format is dev mountpoint filesystem
+function make_mtab() {
+	mtab=$(mktemp)
+	mount > $mtab
+	sed -i '' 's/ on / /' $mtab
+	sed -i '' 's/ (/ /' $mtab
+	sed -i '' 's/,.*/ /' $mtab
+	echo $mtab
+}
+
+
 # --------------------------------------------------------------------
 # startup checks
 # --------------------------------------------------------------------
@@ -218,7 +238,7 @@ if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre")){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"|| $'${FSF}'=="ufs")){print $'${MF}' }}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -235,6 +255,10 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
         log "CRIT: /proc wasn't mounted!"
         mount -t proc proc /proc
         ERR_MESG[${#ERR_MESG[*]}]="CRIT: mounted /proc $?"
+fi
+
+if [ "${MTAB}" == "none" ]; then
+	MTAB=$(make_mtab)
 fi
 
 if [ ! -e "${MTAB}" ]; then
@@ -316,6 +340,11 @@ for MP in ${MPS} ; do
         fi
 
 done
+
+# Remove mtab if it's a temporary file
+if [[ "${MTAB}" =~ "/tmp" ]]; then
+       rm -f ${MTAB}
+fi
 
 if [ ${#ERR_MESG[*]} -ne 0 ]; then
         echo -n "CRITICAL: "
