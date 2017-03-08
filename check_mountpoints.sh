@@ -234,11 +234,29 @@ do
         esac
 done
 
+# ZFS file system have no fstab. Make on
+
+if [ -x '/sbin/zfs' ]; then
+	TMPTAB=$(mktemp)
+	cat ${FSTAB} > ${TMPTAB}
+	for DS in $(zfs list -H -o name); do
+		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
+		if [ ! -d "$MP" ]; then 
+			continue
+		fi
+		RO='defaults'
+		RO=$(zfs get -H readonly ${DS} |awk '/$3 == on/{print "ro")')
+		echo -e "$DS\t$MP\tzfs\t$RO\t0\t@" >> ${TMPTAB}
+	done
+	FSTAB=${TMPTAB}
+fi
+		 
+
 if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre"|| $'${FSF}'=="ufs")){print $'${MF}' }}' | tr '\n' ' '`
+        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs")){print $'${MF}' }' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -341,9 +359,12 @@ for MP in ${MPS} ; do
 
 done
 
-# Remove mtab if it's a temporary file
+# Remove temporary files
 if [[ "${MTAB}" =~ "/tmp" ]]; then
        rm -f ${MTAB}
+fi
+if [[ "${FSTAB}" =~ "/tmp" ]]; then
+       rm -f ${FSTAB}
 fi
 
 if [ ${#ERR_MESG[*]} -ne 0 ]; then
