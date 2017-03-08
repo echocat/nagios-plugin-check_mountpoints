@@ -241,9 +241,22 @@ if [ -x '/sbin/zfs' ]; then
 	cat ${FSTAB} > ${TMPTAB}
 	for DS in $(zfs list -H -o name); do
 		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
+		# mountpoint ~ "none|legacy|-"
 		if [ ! -d "$MP" ]; then 
 			continue
 		fi
+		case $KERNEL in 
+  			SunOS) 
+			if [ $(zfs get -H zoned ${DS} |awk '{pirnt $3}') == 'yes' ]; then
+				continue
+			fi
+         		;;
+			FreeBSD)
+			if [ $(zfs get -H jailed ${DS} |awk '{pirnt $3}') == 'yes' ]; then
+				continue
+			fi
+	 		;; 
+		esac
 		RO='defaults'
 		RO=$(zfs get -H readonly ${DS} |awk '/$3 == on/{print "ro")')
 		echo -e "$DS\t$MP\tzfs\t$RO\t0\t@" >> ${TMPTAB}
