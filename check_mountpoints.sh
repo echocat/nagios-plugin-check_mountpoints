@@ -52,7 +52,7 @@
 #  - just update license information
 # changes 1.10
 #  - new flag -w results in a write test on the mountpoint
-#  - kernel logger logs CRITICAL check results now as CRIT 
+#  - kernel logger logs CRITICAL check results now as CRIT
 # changes 1.9
 #  - new flag -i disable check of fstab (if you use automount etc.)
 # changes 1.8
@@ -109,7 +109,7 @@ if [ -z "$STATE_OK" ]; then
 fi
 
 KERNEL=`uname -s`
-case $KERNEL in 
+case $KERNEL in
   # For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
   SunOS) FSF=4
          MF=3
@@ -134,7 +134,7 @@ case $KERNEL in
          FSTAB=/etc/fstab
          MTAB=none
          GREP=grep
-	 ;; 
+	 ;;
   *)     FSF=3
          MF=2
          OF=4
@@ -242,28 +242,30 @@ if [ -x '/sbin/zfs' ]; then
 	for DS in $(zfs list -H -o name); do
 		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
 		# mountpoint ~ "none|legacy|-"
-		if [ ! -d "$MP" ]; then 
+		if [ ! -d "$MP" ]; then
 			continue
 		fi
-		case $KERNEL in 
-  			SunOS) 
-			if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'yes' ]; then
+		if [ $(zfs get -H canmount ${DS} |awk '{print $3}') == 'off' ]; then
+			continue
+		fi
+		case $KERNEL in
+			SunOS)
+			if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'on' ]; then
 				continue
 			fi
-         		;;
+			;;
 			FreeBSD)
-			if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'yes' ]; then
+			if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'on' ]; then
 				continue
 			fi
-	 		;; 
+			;;
 		esac
-		RO=$(zfs get -H readonly ${DS} |awk '/$3 == on/{print "ro"}')
+		RO=$(zfs get -H readonly ${DS} |awk '($3 == "on"){print "ro"}')
 		[ -z "$RO" ] &&  RO='rw'
 		echo -e "$DS\t$MP\tzfs\t$RO\t0\t0" >> ${TMPTAB}
 	done
 	FSTAB=${TMPTAB}
 fi
-		 
 
 if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
@@ -345,28 +347,37 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
-                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
-                        touch ${TOUCHFILE} &>/dev/null &
-                        TOUCHPID=$!
-                        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-                                if ps -p $TOUCHPID > /dev/null ; then
-                                        sleep 1
-                                else
-                                        break
-                                fi
-                        done
-                        if ps -p $TOUCHPID > /dev/null ; then
-                                $(kill -s SIGTERM $TOUCHPID &>/dev/null)
-                                log "CRIT: ${TOUCHFILE} is not writable."
-                                ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
-                        else
-                        	if [ ! -f ${TOUCHFILE} ]; then
-                        		log "CRIT: ${TOUCHFILE} is not writable."
-                                	ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."	
-                        	else
-                                	rm ${TOUCHFILE} &>/dev/null
-                                fi
-                        fi
+		## in auto mode first check if it's readonly
+			ISRW=1
+			for OPT in $(${GREP} -w ${MP} ${FSTAB} |awk '{print $4}'| sed -e 's/,/ /g'); do
+				if [ "$OPT" == 'ro' ]; then
+					ISRW=0
+				fi
+			done
+			if [ ${AUTO} -eq 1 ] &&  [ ${ISRW} -eq 1 ]; then
+				TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
+				touch ${TOUCHFILE} &>/dev/null &
+				TOUCHPID=$!
+				for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
+					if ps -p $TOUCHPID > /dev/null ; then
+						sleep 1
+					else
+						break
+					fi
+				done
+				if ps -p $TOUCHPID > /dev/null ; then
+					$(kill -s SIGTERM $TOUCHPID &>/dev/null)
+					log "CRIT: ${TOUCHFILE} is not writable."
+					ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+				else
+					if [ ! -f ${TOUCHFILE} ]; then
+						log "CRIT: ${TOUCHFILE} is not writable."
+						ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
+					else
+						rm ${TOUCHFILE} &>/dev/null
+					fi
+				fi
+			fi
                 fi
         fi
 
