@@ -271,7 +271,7 @@ if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs"))print $'${MF}'}' | tr '\n' ' '`
+	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs"))print $'${MF}'}' | tr '\n' ' ' | sed -e 's/\/$//i'`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
