@@ -247,19 +247,19 @@ if [ -x '/sbin/zfs' ]; then
 		fi
 		case $KERNEL in 
   			SunOS) 
-			if [ $(zfs get -H zoned ${DS} |awk '{pirnt $3}') == 'yes' ]; then
+			if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'yes' ]; then
 				continue
 			fi
          		;;
 			FreeBSD)
-			if [ $(zfs get -H jailed ${DS} |awk '{pirnt $3}') == 'yes' ]; then
+			if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'yes' ]; then
 				continue
 			fi
 	 		;; 
 		esac
-		RO='defaults'
-		RO=$(zfs get -H readonly ${DS} |awk '/$3 == on/{print "ro")')
-		echo -e "$DS\t$MP\tzfs\t$RO\t0\t@" >> ${TMPTAB}
+		RO=$(zfs get -H readonly ${DS} |awk '/$3 == on/{print "ro"}')
+		[ -z "$RO" ] &&  RO='rw'
+		echo -e "$DS\t$MP\tzfs\t$RO\t0\t0" >> ${TMPTAB}
 	done
 	FSTAB=${TMPTAB}
 fi
@@ -269,7 +269,7 @@ if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs")){print $'${MF}' }' | tr '\n' ' '`
+	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs"))print $'${MF}'}' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
