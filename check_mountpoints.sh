@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # --------------------------------------------------------------------
 # **** BEGIN LICENSE BLOCK *****
@@ -52,7 +52,7 @@
 #  - just update license information
 # changes 1.10
 #  - new flag -w results in a write test on the mountpoint
-#  - kernel logger logs CRITICAL check results now as CRIT 
+#  - kernel logger logs CRITICAL check results now as CRIT
 # changes 1.9
 #  - new flag -i disable check of fstab (if you use automount etc.)
 # changes 1.8
@@ -98,7 +98,7 @@ NOAUTOCOND=1
 NOAUTOIGNORE=0
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
-LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins"
+LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins /usr/local/libexec/nagios/"
 for i in ${LIBEXEC} ; do
   [ -r ${i}/utils.sh ] && . ${i}/utils.sh
 done
@@ -109,7 +109,7 @@ if [ -z "$STATE_OK" ]; then
 fi
 
 KERNEL=`uname -s`
-case $KERNEL in 
+case $KERNEL in
   # For solaris FSF=4 MF=3 FSTAB=/etc/vfstab MTAB=/etc/mnttab gnu grep and bash required
   SunOS) FSF=4
          MF=3
@@ -127,6 +127,14 @@ case $KERNEL in
          MTAB=/dev/mnttab
          GREP=grep
          ;;
+  FreeBSD) FSF=3
+         MF=2
+         OF=4
+         NOAUTOSTR=noauto
+         FSTAB=/etc/fstab
+         MTAB=none
+         GREP=grep
+	 ;;
   *)     FSF=3
          MF=2
          OF=4
@@ -183,6 +191,18 @@ function print_help() {
         echo "For contact info, read the plugin itself..."
 }
 
+# Create a temporary mtab systems that don't have such a file
+# Format is dev mountpoint filesystem
+function make_mtab() {
+	mtab=$(mktemp)
+	mount > $mtab
+	sed -i '' 's/ on / /' $mtab
+	sed -i '' 's/ (/ /' $mtab
+	sed -i '' 's/,.*/ /' $mtab
+	echo $mtab
+}
+
+
 # --------------------------------------------------------------------
 # startup checks
 # --------------------------------------------------------------------
@@ -214,11 +234,44 @@ do
         esac
 done
 
+# ZFS file system have no fstab. Make on
+
+if [ -x '/sbin/zfs' ]; then
+	TMPTAB=$(mktemp)
+	cat ${FSTAB} > ${TMPTAB}
+	for DS in $(zfs list -H -o name); do
+		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
+		# mountpoint ~ "none|legacy|-"
+		if [ ! -d "$MP" ]; then
+			continue
+		fi
+		if [ $(zfs get -H canmount ${DS} |awk '{print $3}') == 'off' ]; then
+			continue
+		fi
+		case $KERNEL in
+			SunOS)
+			if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'on' ]; then
+				continue
+			fi
+			;;
+			FreeBSD)
+			if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'on' ]; then
+				continue
+			fi
+			;;
+		esac
+		RO=$(zfs get -H readonly ${DS} |awk '($3 == "on"){print "ro"}')
+		[ -z "$RO" ] &&  RO='rw'
+		echo -e "$DS\t$MP\tzfs\t$RO\t0\t0" >> ${TMPTAB}
+	done
+	FSTAB=${TMPTAB}
+fi
+
 if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-        MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre")){print $'${MF}' }}' | tr '\n' ' '`
+	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs"))print $'${MF}'}' | tr '\n' ' ' | sed -e 's/\/$//i'`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
@@ -235,6 +288,10 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
         log "CRIT: /proc wasn't mounted!"
         mount -t proc proc /proc
         ERR_MESG[${#ERR_MESG[*]}]="CRIT: mounted /proc $?"
+fi
+
+if [ "${MTAB}" == "none" ]; then
+	MTAB=$(make_mtab)
 fi
 
 if [ ! -e "${MTAB}" ]; then
@@ -290,32 +347,49 @@ for MP in ${MPS} ; do
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
                 elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
-                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
-                        touch ${TOUCHFILE} &>/dev/null &
-                        TOUCHPID=$!
-                        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-                                if ps -p $TOUCHPID > /dev/null ; then
-                                        sleep 1
-                                else
-                                        break
-                                fi
-                        done
-                        if ps -p $TOUCHPID > /dev/null ; then
-                                $(kill -s SIGTERM $TOUCHPID &>/dev/null)
-                                log "CRIT: ${TOUCHFILE} is not writable."
-                                ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
-                        else
-                        	if [ ! -f ${TOUCHFILE} ]; then
-                        		log "CRIT: ${TOUCHFILE} is not writable."
-                                	ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."	
-                        	else
-                                	rm ${TOUCHFILE} &>/dev/null
-                                fi
-                        fi
+		## in auto mode first check if it's readonly
+			ISRW=1
+			for OPT in $(${GREP} -w ${MP} ${FSTAB} |awk '{print $4}'| sed -e 's/,/ /g'); do
+				if [ "$OPT" == 'ro' ]; then
+					ISRW=0
+				fi
+			done
+			if [ ${AUTO} -eq 1 ] &&  [ ${ISRW} -eq 1 ]; then
+				TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
+				touch ${TOUCHFILE} &>/dev/null &
+				TOUCHPID=$!
+				for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
+					if ps -p $TOUCHPID > /dev/null ; then
+						sleep 1
+					else
+						break
+					fi
+				done
+				if ps -p $TOUCHPID > /dev/null ; then
+					$(kill -s SIGTERM $TOUCHPID &>/dev/null)
+					log "CRIT: ${TOUCHFILE} is not writable."
+					ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+				else
+					if [ ! -f ${TOUCHFILE} ]; then
+						log "CRIT: ${TOUCHFILE} is not writable."
+						ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
+					else
+						rm ${TOUCHFILE} &>/dev/null
+					fi
+				fi
+			fi
                 fi
         fi
 
 done
+
+# Remove temporary files
+if [[ "${MTAB}" =~ "/tmp" ]]; then
+       rm -f ${MTAB}
+fi
+if [[ "${FSTAB}" =~ "/tmp" ]]; then
+       rm -f ${FSTAB}
+fi
 
 if [ ${#ERR_MESG[*]} -ne 0 ]; then
         echo -n "CRITICAL: "
