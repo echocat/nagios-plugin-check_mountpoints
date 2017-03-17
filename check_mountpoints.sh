@@ -96,6 +96,7 @@ IGNOREFSTAB=0
 WRITETEST=0
 NOAUTOCOND=1
 NOAUTOIGNORE=0
+DFARGS=''
 
 export PATH="/bin:/usr/local/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin"
 LIBEXEC="/opt/nagios/libexec /usr/lib64/nagios/plugins /usr/lib/nagios/plugins /usr/lib/monitoring-plugins /usr/local/nagios/libexec /usr/local/icinga/libexec /usr/local/libexec /opt/csw/libexec/nagios-plugins /opt/plugins /usr/local/libexec/nagios/"
@@ -175,6 +176,7 @@ function usage() {
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
         echo " -o          When autoselecting mounts from fstab, ignore mounts having noauto flag. (default: unset)"
         echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
+        echo " -e ARGS     Extra arguments for df (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
 
@@ -229,6 +231,7 @@ do
                 -i) IGNOREFSTAB=1; shift;;
                 -w) WRITETEST=1; shift;;
                 -L) LINKOK=1; shift;;
+                -e) DFARGS=$2; shift 2;; 
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -328,7 +331,7 @@ for MP in ${MPS} ; do
         fi
 
         ## check if it stales
-        df -k ${MP} &>/dev/null &
+        df -k ${DFARGS} ${MP} &>/dev/null &
         DFPID=$!
         for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
                 if ps -p $DFPID > /dev/null ; then
