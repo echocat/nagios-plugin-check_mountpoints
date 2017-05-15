@@ -351,37 +351,41 @@ for MP in ${MPS} ; do
                 if [ ! -d ${MP} ]; then
                         log "CRIT: ${MP} doesn't exist on filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
-                elif [ ${WRITETEST} -eq 1 ]; then
                 ## if wanted, check if it is writable
+		elif [ ${WRITETEST} -eq 1 ]; then
+                	ISRW=1
 		## in auto mode first check if it's readonly
+		elif [ ${WRITETEST} -eq 1 ] && [ ${AUTO} -eq 1 ]; then
 			ISRW=1
 			for OPT in $(${GREP} -w ${MP} ${FSTAB} |awk '{print $4}'| sed -e 's/,/ /g'); do
 				if [ "$OPT" == 'ro' ]; then
 					ISRW=0
+                                        log "CRIT: ${TOUCHFILE} is not mounted as writable."
+                                        ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} filesystem was mounted RO."
 				fi
 			done
-			if [ ${AUTO} -eq 1 ] &&  [ ${ISRW} -eq 1 ]; then
-				TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
-				touch ${TOUCHFILE} &>/dev/null &
-				TOUCHPID=$!
-				for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-					if ps -p $TOUCHPID > /dev/null ; then
-						sleep 1
-					else
-						break
-					fi
-				done
+		fi
+		if [ ${ISRW} -eq 1 ]; then
+			TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
+			touch ${TOUCHFILE} &>/dev/null &
+			TOUCHPID=$!
+			for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
 				if ps -p $TOUCHPID > /dev/null ; then
-					$(kill -s SIGTERM $TOUCHPID &>/dev/null)
-					log "CRIT: ${TOUCHFILE} is not writable."
-					ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+					sleep 1
 				else
-					if [ ! -f ${TOUCHFILE} ]; then
-						log "CRIT: ${TOUCHFILE} is not writable."
-						ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
-					else
-						rm ${TOUCHFILE} &>/dev/null
-					fi
+					break
+				fi
+			done
+			if ps -p $TOUCHPID > /dev/null ; then
+				$(kill -s SIGTERM $TOUCHPID &>/dev/null)
+				log "CRIT: ${TOUCHFILE} is not writable."
+				ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+			else
+				if [ ! -f ${TOUCHFILE} ]; then
+					log "CRIT: ${TOUCHFILE} is not writable."
+					ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
+				else
+					rm ${TOUCHFILE} &>/dev/null
 				fi
 			fi
                 fi
