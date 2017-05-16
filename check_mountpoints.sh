@@ -337,14 +337,15 @@ for MP in ${MPS} ; do
         df -k ${DFARGS} ${MP} &>/dev/null &
         DFPID=$!
         for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-                if ps -p $DFPID > /dev/null ; then
+                if ps -p $DFPID &> /dev/null ; then
                         sleep 1
                 else
                         break
                 fi
         done
         if ps -p $DFPID > /dev/null ; then
-                $(kill -s SIGTERM $DFPID &>/dev/null)
+                $(kill -s SIGTERM $DFPID) &> /dev/null
+                wait $DFPID 2>/dev/null
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
         else
         ## if it not stales, check if it is a directory
