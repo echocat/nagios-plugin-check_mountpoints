@@ -348,6 +348,7 @@ for MP in ${MPS} ; do
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
         else
         ## if it not stales, check if it is a directory
+	        ISRW=0
                 if [ ! -d ${MP} ]; then
                         log "CRIT: ${MP} doesn't exist on filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
