@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.0
-# @date: 2017-03-17 14:36:00 CEST
+# @version: 2.1
+# @date: 2017-07-17 14:36:00 CEST
 #
+# changes 2.1
+#  - clean output when mount point is stalled
 # changes 2.0
 #  - add support for FreeBSD
 #  - ignore trailing slashes on mounts
@@ -336,6 +338,7 @@ for MP in ${MPS} ; do
         ## check if it stales
         df -k ${DFARGS} ${MP} &>/dev/null &
         DFPID=$!
+        disown
         for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
                 if ps -p $DFPID > /dev/null ; then
                         sleep 1
