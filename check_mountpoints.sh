@@ -22,8 +22,8 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.1
-# @date: 2017-07-17 14:36:00 CEST
+# @version: 2.2
+# @date: 2017-09-15 16:06:00 CEST
 #
 # changes 2.2
 #  - add support for ceph
