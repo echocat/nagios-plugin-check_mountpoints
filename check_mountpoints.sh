@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.3
-# @date: 2017-10-08 22:40:00 CEST
+# @version: 2.4
+# @date: 2017-12-03 21:25:00 CEST
 #
+# changes 2.4
+#  - add support for ext2
 # changes 2.3
 #  - add support for btrfs
 # changes 2.2
@@ -283,7 +285,7 @@ if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
+	MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext2" || $'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
