@@ -147,7 +147,7 @@ case $KERNEL in
          FSTAB=/etc/fstab
          MTAB=none
          GREP=grep
-	 ;;
+         ;;
   *)     FSF=3
          MF=2
          OF=4
@@ -186,7 +186,7 @@ function usage() {
         echo " -i          Ignore fstab. Do not fail just because mount is not in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
-	echo " -E PATH     Use with -a or -A to exclude a path from fstab. Use '\|' between paths for multiple. (default: unset)"
+        echo " -E PATH     Use with -a or -A to exclude a path from fstab. Use '\|' between paths for multiple. (default: unset)"
         echo " -o          When autoselecting mounts from fstab, ignore mounts having noauto flag. (default: unset)"
         echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
         echo " -e ARGS     Extra arguments for df (default: unset)"
@@ -209,12 +209,12 @@ function print_help() {
 # Create a temporary mtab systems that don't have such a file
 # Format is dev mountpoint filesystem
 function make_mtab() {
-	mtab=$(mktemp)
-	mount > $mtab
-	sed -i '' 's/ on / /' $mtab
-	sed -i '' 's/ (/ /' $mtab
-	sed -i '' 's/,.*/ /' $mtab
-	echo $mtab
+        mtab=$(mktemp)
+        mount > $mtab
+        sed -i '' 's/ on / /' $mtab
+        sed -i '' 's/ (/ /' $mtab
+        sed -i '' 's/,.*/ /' $mtab
+        echo $mtab
 }
 
 
@@ -232,7 +232,7 @@ do
         case "$1" in
                 -a) AUTO=1; shift;;
                 -A) AUTO=1; AUTOIGNORE=1; shift;;
-		-E) EXCLUDE=$2; shift 2;;
+                -E) EXCLUDE=$2; shift 2;;
                 -o) NOAUTOIGNORE=1; shift;;
                 --help) print_help; exit $STATE_OK;;
                 -h) print_help; exit $STATE_OK;;
@@ -245,7 +245,7 @@ do
                 -i) IGNOREFSTAB=1; shift;;
                 -w) WRITETEST=1; shift;;
                 -L) LINKOK=1; shift;;
-                -e) DFARGS=$2; shift 2;; 
+                -e) DFARGS=$2; shift 2;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -254,50 +254,50 @@ done
 # ZFS file system have no fstab. Make on
 
 if [ -x '/sbin/zfs' ]; then
-	TMPTAB=$(mktemp)
-	cat ${FSTAB} > ${TMPTAB}
-	for DS in $(zfs list -H -o name); do
-		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
-		# mountpoint ~ "none|legacy|-"
-		if [ ! -d "$MP" ]; then
-			continue
-		fi
-		if [ $(zfs get -H canmount ${DS} |awk '{print $3}') == 'off' ]; then
-			continue
-		fi
-		case $KERNEL in
-			SunOS)
-			if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'on' ]; then
-				continue
-			fi
-			;;
-			FreeBSD)
-			if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'on' ]; then
-				continue
-			fi
-			;;
-		esac
-		RO=$(zfs get -H readonly ${DS} |awk '($3 == "on"){print "ro"}')
-		[ -z "$RO" ] &&  RO='rw'
-		echo -e "$DS\t$MP\tzfs\t$RO\t0\t0" >> ${TMPTAB}
-	done
-	FSTAB=${TMPTAB}
+        TMPTAB=$(mktemp)
+        cat ${FSTAB} > ${TMPTAB}
+        for DS in $(zfs list -H -o name); do
+                MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
+                # mountpoint ~ "none|legacy|-"
+                if [ ! -d "$MP" ]; then
+                        continue
+                fi
+                if [ $(zfs get -H canmount ${DS} |awk '{print $3}') == 'off' ]; then
+                        continue
+                fi
+                case $KERNEL in
+                        SunOS)
+                        if [ $(zfs get -H zoned ${DS} |awk '{print $3}') == 'on' ]; then
+                                continue
+                        fi
+                        ;;
+                        FreeBSD)
+                        if [ $(zfs get -H jailed ${DS} |awk '{print $3}') == 'on' ]; then
+                                continue
+                        fi
+                        ;;
+                esac
+                RO=$(zfs get -H readonly ${DS} |awk '($3 == "on"){print "ro"}')
+                [ -z "$RO" ] &&  RO='rw'
+                echo -e "$DS\t$MP\tzfs\t$RO\t0\t0" >> ${TMPTAB}
+        done
+        FSTAB=${TMPTAB}
 fi
 
 if [ ${AUTO} -eq 1 ]; then
         if [ ${NOAUTOIGNORE} -eq 1 ]; then
                  NOAUTOCOND='!index($'${OF}',"'${NOAUTOSTR}'")'
         fi
-	if [ "${EXCLUDE}" == "none" ]; then
-		MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext2" || $'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs" || $'${FSF}'=="yas3fs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
-	else
-		MPS=`${GREP} -v '^#' ${FSTAB} | ${GREP} -v ${EXCLUDE} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext2" || $'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs" || $'${FSF}'=="yas3fs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
-	fi
+        if [ "${EXCLUDE}" == "none" ]; then
+                MPS=`${GREP} -v '^#' ${FSTAB} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext2" || $'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs" || $'${FSF}'=="yas3fs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
+        else
+                MPS=`${GREP} -v '^#' ${FSTAB} | ${GREP} -v ${EXCLUDE} | awk '{if ('${NOAUTOCOND}'&&($'${FSF}'=="ext2" || $'${FSF}'=="ext3" || $'${FSF}'=="xfs" || $'${FSF}'=="auto" || $'${FSF}'=="ext4" || $'${FSF}'=="nfs" || $'${FSF}'=="nfs4" || $'${FSF}'=="davfs" || $'${FSF}'=="cifs" || $'${FSF}'=="fuse" || $'${FSF}'=="glusterfs" || $'${FSF}'=="ocfs2" || $'${FSF}'=="lustre" || $'${FSF}'=="ufs" || $'${FSF}'=="zfs" || $'${FSF}'=="ceph" || $'${FSF}'=="btrfs" || $'${FSF}'=="yas3fs"))print $'${MF}'}' | sed -e 's/\/$//i' | tr '\n' ' '`
+        fi
 fi
 
 if [ -z "${MPS}"  ] && [ ${AUTOIGNORE} -eq 1 ] ; then
-		echo "OK: no external mounts were found in ${FSTAB}"
-		exit $STATE_OK
+                echo "OK: no external mounts were found in ${FSTAB}"
+                exit $STATE_OK
 elif [ -z "${MPS}"  ]; then
         log "ERROR: no mountpoints given!"
         echo "ERROR: no mountpoints given!"
@@ -312,7 +312,7 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
 fi
 
 if [ "${MTAB}" == "none" ]; then
-	MTAB=$(make_mtab)
+        MTAB=$(make_mtab)
 fi
 
 if [ ! -e "${MTAB}" ]; then
@@ -342,69 +342,83 @@ for MP in ${MPS} ; do
         ## check kernel mounts
         if [ -z "$( awk '$'${MF}' == "'${MP}'" {print $'${MF}'}' "${MTAB}" )" ]; then
         ## if a softlink is not an adequate replacement
-        	if [ -z "$LINKOK" -o ! -L ${MP} ]; then
-                	log "CRIT: ${MP} is not mounted"
-                	ERR_MESG[${#ERR_MESG[*]}]="${MP} is not mounted"
+                if [ -z "$LINKOK" -o ! -L ${MP} ]; then
+                        log "CRIT: ${MP} is not mounted"
+                        ERR_MESG[${#ERR_MESG[*]}]="${MP} is not mounted"
                 fi
         fi
 
         ## check if it stales
+        start_at=$(date +%s.%N)
+        stale_at=$(bc <<< "scale=2; $start_at + ${TIME_TILL_STALE}")
+        timeout_at=$(bc <<< "scale=2; $stale_at + ${TIME_TILL_STALE}")
         df -k ${DFARGS} ${MP} &>/dev/null &
         DFPID=$!
         disown
-        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
+        curr=$(date +%s.%N)
+        stale=0
+        while [ $(bc <<< "scale=2; ($curr < $timeout_at)") ]; do
                 if ps -p $DFPID > /dev/null ; then
-                        sleep 1
+                        if [ "$(bc <<< "scale=2; $curr > $stale_at")" == "1" ]; then
+                                stale=1
+                        fi
+                        sleep 0.01
                 else
                         break
                 fi
+                curr=$(date +%s.%N)
         done
+        end_at=$(date +%s.%N);
+        time_cost=$(bc <<< "scale=2; ${end_at} - ${start_at}")
+        PERF="${PERF}'${MP}'=${time_cost}s;${TIME_TILL_STALE};${TIME_TILL_STALE} "
+        if [ "${stale}"  == "1" ]; then
+                ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
+        fi
         if ps -p $DFPID > /dev/null ; then
                 $(kill -s SIGTERM $DFPID &>/dev/null)
-                ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
         else
         ## if it not stales, check if it is a directory
-	        ISRW=0
+                ISRW=0
                 if [ ! -d ${MP} ]; then
                         log "CRIT: ${MP} doesn't exist on filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
                 ## if wanted, check if it is writable
-		elif [ ${WRITETEST} -eq 1 ]; then
-                	ISRW=1
-		## in auto mode first check if it's readonly
-		elif [ ${WRITETEST} -eq 1 ] && [ ${AUTO} -eq 1 ]; then
-			ISRW=1
-			for OPT in $(${GREP} -w ${MP} ${FSTAB} |awk '{print $4}'| sed -e 's/,/ /g'); do
-				if [ "$OPT" == 'ro' ]; then
-					ISRW=0
+                elif [ ${WRITETEST} -eq 1 ]; then
+                        ISRW=1
+                ## in auto mode first check if it's readonly
+                elif [ ${WRITETEST} -eq 1 ] && [ ${AUTO} -eq 1 ]; then
+                        ISRW=1
+                        for OPT in $(${GREP} -w ${MP} ${FSTAB} |awk '{print $4}'| sed -e 's/,/ /g'); do
+                                if [ "$OPT" == 'ro' ]; then
+                                        ISRW=0
                                         log "CRIT: ${TOUCHFILE} is not mounted as writable."
                                         ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} filesystem was mounted RO."
-				fi
-			done
-		fi
-		if [ ${ISRW} -eq 1 ]; then
-			TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
-			touch ${TOUCHFILE} &>/dev/null &
-			TOUCHPID=$!
-			for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-				if ps -p $TOUCHPID > /dev/null ; then
-					sleep 1
-				else
-					break
-				fi
-			done
-			if ps -p $TOUCHPID > /dev/null ; then
-				$(kill -s SIGTERM $TOUCHPID &>/dev/null)
-				log "CRIT: ${TOUCHFILE} is not writable."
-				ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
-			else
-				if [ ! -f ${TOUCHFILE} ]; then
-					log "CRIT: ${TOUCHFILE} is not writable."
-					ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
-				else
-					rm ${TOUCHFILE} &>/dev/null
-				fi
-			fi
+                                fi
+                        done
+                fi
+                if [ ${ISRW} -eq 1 ]; then
+                        TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
+                        touch ${TOUCHFILE} &>/dev/null &
+                        TOUCHPID=$!
+                        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
+                                if ps -p $TOUCHPID > /dev/null ; then
+                                        sleep 1
+                                else
+                                        break
+                                fi
+                        done
+                        if ps -p $TOUCHPID > /dev/null ; then
+                                $(kill -s SIGTERM $TOUCHPID &>/dev/null)
+                                log "CRIT: ${TOUCHFILE} is not writable."
+                                ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+                        else
+                                if [ ! -f ${TOUCHFILE} ]; then
+                                        log "CRIT: ${TOUCHFILE} is not writable."
+                                        ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
+                                else
+                                        rm ${TOUCHFILE} &>/dev/null
+                                fi
+                        fi
                 fi
         fi
 
@@ -423,9 +437,14 @@ if [ ${#ERR_MESG[*]} -ne 0 ]; then
         for element in "${ERR_MESG[@]}"; do
                 echo -n ${element}" ; "
         done
-        echo
+        echo "|${PERF}"
         exit $STATE_CRITICAL
 fi
 
-echo "OK: all mounts were found (${MPS})"
+echo "OK: all mounts were found (${MPS})|${PERF}"
 exit $STATE_OK
+#!/usr/bin/env bash
+
+# --------------------------------------------------------------------
+# **** BEGIN LICENSE BLOCK *****
+
