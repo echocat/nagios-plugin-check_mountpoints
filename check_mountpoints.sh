@@ -25,6 +25,10 @@
 # @version: 2.4
 # @date: 2017-12-03 21:25:00 CEST
 #
+# changes 2.5
+#  - added performance data (for nagiosgraph or pnp4nagios)
+#  - changed parameter for writable to (uppercase) -W (to free -w for warning acconding dev guidelines https://nagios-plugins.org/doc/guidelines.html)
+#  - added -w and -c params for warning and critical thresholds
 # changes 2.4
 #  - add support for ext2
 # changes 2.3
@@ -161,7 +165,9 @@ esac
 # Time in seconds after which the check assumes that an NFS mount is staled, if
 # it does not respond. (default: 3)
 TIME_TILL_STALE=3
-
+WARN_TIME=3
+CRIT_TIME=3
+CURRENT_STATE=$STATE_OK
 # --------------------------------------------------------------------
 
 
@@ -182,13 +188,15 @@ function usage() {
         echo " -M NUMBER   Mount Field number in fstab (default: ${MF})"
         echo " -O NUMBER   Option Field number in fstab (default: ${OF})"
         echo " -T SECONDS  Responsetime at which an NFS is declared as staled (default: ${TIME_TILL_STALE})"
+        echo " -w SECONDS  Warning threshold for responsetime of an NFS mount (default: ${WARN_TIME})"
+        echo " -c SECONDS  Critical threshold for responsetime of an NFS mount (default: ${CRIT_TIME})"
         echo " -L          Allow softlinks to be accepted instead of mount points"
         echo " -i          Ignore fstab. Do not fail just because mount is not in fstab. (default: unset)"
         echo " -a          Autoselect mounts from fstab (default: unset)"
         echo " -A          Autoselect from fstab. Return OK if no mounts found. (default: unset)"
         echo " -E PATH     Use with -a or -A to exclude a path from fstab. Use '\|' between paths for multiple. (default: unset)"
         echo " -o          When autoselecting mounts from fstab, ignore mounts having noauto flag. (default: unset)"
-        echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
+        echo " -W          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
         echo " -e ARGS     Extra arguments for df (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
@@ -217,6 +225,29 @@ function make_mtab() {
         echo $mtab
 }
 
+function measure_exectime() {
+        # check params
+        DFPID=$1
+        POSTFIX=$2
+        # compute relevant timestamps
+        start_at=$(date +%s.%N)
+        stale_at=$(bc <<< "$start_at + ${TIME_TILL_STALE}")
+        # loop until process is ended or stale-time is reached
+        while [ $(bc <<< "scale=2; ($(date +%s.%N) < $stale_at)") ]; do
+                if ps -p $DFPID > /dev/null ; then
+                        sleep 0.01
+                else
+                        break
+                fi
+        done
+        # set endtime and compute duration of process
+        end_at=$(date +%s.%N)
+        time_cost=$(bc <<< "scale=3; (${end_at} - ${start_at})/1")
+        warn_at=$(bc <<< "$start_at + ${WARN_TIME}")
+        crit_at=$(bc <<< "$start_at + ${CRIT_TIME}")
+        # set (global) performance data
+        PERFDATA="${PERFDATA}'${MP}${POSTFIX}'=${time_cost}s;${WARN_TIME};${CRIT_TIME};0;${TIME_TILL_STALE} "
+}
 
 # --------------------------------------------------------------------
 # startup checks
@@ -241,9 +272,11 @@ do
                 -N) FSF=$2; shift 2;;
                 -M) MF=$2; shift 2;;
                 -O) OF=$2; shift 2;;
+                -w) WARN_TIME=$2; shift 2;;
+                -c) CRIT_TIME=$2; shift 2;;
                 -T) TIME_TILL_STALE=$2; shift 2;;
                 -i) IGNOREFSTAB=1; shift;;
-                -w) WRITETEST=1; shift;;
+                -W) WRITETEST=1; shift;;
                 -L) LINKOK=1; shift;;
                 -e) DFARGS=$2; shift 2;;
                 /*) MPS="${MPS} $1"; shift;;
@@ -251,8 +284,11 @@ do
         esac
 done
 
-# ZFS file system have no fstab. Make on
+# adjust warn, crit and stale threshold if applicable
+if [ ${WARN_TIME} -gt ${CRIT_TIME} ]; then WARN_TIME=${CRIT_TIME}; fi
+if [ ${TIME_TILL_STALE} -lt ${CRIT_TIME} ]; then TILE_TILL_STALE=${CRIT_TIME}; fi
 
+# ZFS file system have no fstab. Make on
 if [ -x '/sbin/zfs' ]; then
         TMPTAB=$(mktemp)
         cat ${FSTAB} > ${TMPTAB}
@@ -309,6 +345,7 @@ if [ ! -f /proc/mounts -a "${MTAB}" == "/proc/mounts" ]; then
         log "CRIT: /proc wasn't mounted!"
         mount -t proc proc /proc
         ERR_MESG[${#ERR_MESG[*]}]="CRIT: mounted /proc $?"
+        CURRENT_STATE=$STATE_CRITICAL
 fi
 
 if [ "${MTAB}" == "none" ]; then
@@ -336,6 +373,7 @@ for MP in ${MPS} ; do
                 if [ -z "$( "${GREP}" -v '^#' "${FSTAB}" | awk '$'${MF}' == "'${MP}'" {print $'${MF}'}' )" ]; then
                         log "CRIT: ${MP} doesn't exist in /etc/fstab"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist in fstab ${FSTAB}"
+                        CURRENT_STATE=$STATE_CRITICAL
                 fi
         fi
 
@@ -345,34 +383,30 @@ for MP in ${MPS} ; do
                 if [ -z "$LINKOK" -o ! -L ${MP} ]; then
                         log "CRIT: ${MP} is not mounted"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} is not mounted"
+                        CURRENT_STATE=$STATE_CRITICAL
                 fi
         fi
 
         ## check if it stales
-        start_at=$(date +%s.%N)
-        stale_at=$(bc <<< "scale=2; $start_at + ${TIME_TILL_STALE}")
-        timeout_at=$(bc <<< "scale=2; $stale_at + ${TIME_TILL_STALE}")
         df -k ${DFARGS} ${MP} &>/dev/null &
         DFPID=$!
         disown
-        curr=$(date +%s.%N)
-        stale=0
-        while [ $(bc <<< "scale=2; ($curr < $timeout_at)") ]; do
-                if ps -p $DFPID > /dev/null ; then
-                        if [ "$(bc <<< "scale=2; $curr > $stale_at")" == "1" ]; then
-                                stale=1
-                        fi
-                        sleep 0.01
-                else
-                        break
-                fi
-                curr=$(date +%s.%N)
-        done
-        end_at=$(date +%s.%N);
-        time_cost=$(bc <<< "scale=2; ${end_at} - ${start_at}")
-        PERF="${PERF}'${MP}'=${time_cost}s;${TIME_TILL_STALE};${TIME_TILL_STALE} "
-        if [ "${stale}"  == "1" ]; then
+        measure_exectime $DFPID
+
+        if [ "$(bc <<< "$end_at > $stale_at")" == "1" ]; then
+                log "CRIT: ${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
                 ERR_MESG[${#ERR_MESG[*]}]="${MP} did not respond in $TIME_TILL_STALE sec. Seems to be stale."
+                CURRENT_STATE=${STATE_CRITICAL}
+        elif [ "$(bc <<< "$end_at > $crit_at")" == "1" ]; then
+                log "CRIT: ${MP} exceeded critical threshold ($CRIT_TIME sec.)"
+                ERR_MESG[${#ERR_MESG[*]}]="${MP} exceeded critical threshold ($CRIT_TIME sec.)"
+                CURRENT_STATE=${STATE_CRITICAL}
+        elif [ "$(bc <<< "$end_at > $warn_at")" == "1" ]; then
+                log "CRIT: ${MP} exceeded warning threshold ($WARN_TIME sec.)"
+                ERR_MESG[${#ERR_MESG[*]}]="${MP} exceeded warning threshold ($WARN_TIME sec.)"
+                if [ $CURRENT_STATE -lt $STATE_WARNING ]; then
+                    CURRENT_STATE=${STATE_WARNING}
+                fi
         fi
         if ps -p $DFPID > /dev/null ; then
                 $(kill -s SIGTERM $DFPID &>/dev/null)
@@ -382,6 +416,7 @@ for MP in ${MPS} ; do
                 if [ ! -d ${MP} ]; then
                         log "CRIT: ${MP} doesn't exist on filesystem"
                         ERR_MESG[${#ERR_MESG[*]}]="${MP} doesn't exist on filesystem"
+                        CURRENT_STATE=$STATE_CRITICAL
                 ## if wanted, check if it is writable
                 elif [ ${WRITETEST} -eq 1 ]; then
                         ISRW=1
@@ -393,6 +428,7 @@ for MP in ${MPS} ; do
                                         ISRW=0
                                         log "CRIT: ${TOUCHFILE} is not mounted as writable."
                                         ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} filesystem was mounted RO."
+                                        CURRENT_STATE=$STATE_CRITICAL
                                 fi
                         done
                 fi
@@ -400,21 +436,17 @@ for MP in ${MPS} ; do
                         TOUCHFILE=${MP}/.mount_test_from_$(hostname)_$(date +%Y-%m-%d--%H-%M-%S).$RANDOM.$$
                         touch ${TOUCHFILE} &>/dev/null &
                         TOUCHPID=$!
-                        for (( i=1 ; i<$TIME_TILL_STALE ; i++ )) ; do
-                                if ps -p $TOUCHPID > /dev/null ; then
-                                        sleep 1
-                                else
-                                        break
-                                fi
-                        done
+                        measure_exectime ${TOUCHPID} "(WRITE)"
                         if ps -p $TOUCHPID > /dev/null ; then
                                 $(kill -s SIGTERM $TOUCHPID &>/dev/null)
                                 log "CRIT: ${TOUCHFILE} is not writable."
                                 ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP} in $TIME_TILL_STALE sec. Seems to be stale."
+                                CURRENT_STATE=$STATE_CRITICAL
                         else
                                 if [ ! -f ${TOUCHFILE} ]; then
                                         log "CRIT: ${TOUCHFILE} is not writable."
                                         ERR_MESG[${#ERR_MESG[*]}]="Could not write in ${MP}."
+                                        CURRENT_STATE=$STATE_CRITICAL
                                 else
                                         rm ${TOUCHFILE} &>/dev/null
                                 fi
@@ -432,17 +464,21 @@ if [[ "${FSTAB}" =~ "/tmp" ]]; then
        rm -f ${FSTAB}
 fi
 
+# Write result (state and output)
+declare -a STATESTR=("OK" "WARNING" "CRITICAL" "UNKNOWN")
+echo -n "${STATESTR[$CURRENT_STATE]}: "
+
+
 if [ ${#ERR_MESG[*]} -ne 0 ]; then
-        echo -n "CRITICAL: "
         for element in "${ERR_MESG[@]}"; do
                 echo -n ${element}" ; "
         done
-        echo "|${PERF}"
-        exit $STATE_CRITICAL
+else
+    echo -n "all mounts were found (${MPS})"
 fi
 
-echo "OK: all mounts were found (${MPS})|${PERF}"
-exit $STATE_OK
+echo "|${PERFDATA}"
+exit $CURRENT_STATE
 #!/usr/bin/env bash
 
 # --------------------------------------------------------------------
