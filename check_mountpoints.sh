@@ -242,7 +242,9 @@ function measure_exectime() {
         done
         # set endtime and compute duration of process
         end_at=$(date +%s.%N)
+#        time_cost=$(bc <<< 'scale=3; x=(${end_at} - ${start_at})/1; if(x<1){"0"}; x')
         time_cost=$(bc <<< "scale=3; (${end_at} - ${start_at})/1")
+        if [[ ${time_cost:0:1} == "." ]]; then time_cost="0"${time_cost}; fi    # ensure leading zero!
         warn_at=$(bc <<< "$start_at + ${WARN_TIME}")
         crit_at=$(bc <<< "$start_at + ${CRIT_TIME}")
         # set (global) performance data
