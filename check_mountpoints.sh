@@ -248,8 +248,7 @@ function measure_exectime() {
         warn_at=$(bc <<< "$start_at + ${WARN_TIME}")
         crit_at=$(bc <<< "$start_at + ${CRIT_TIME}")
         # set (global) performance data
-#        PERFDATA="${PERFDATA}'${MP}${POSTFIX}'=${time_cost}s;${WARN_TIME};${CRIT_TIME};0;${TIME_TILL_STALE} "
-        PERFDATA="${PERFDATA}'${MP}${POSTFIX}'=${time_cost}s;${WARN_TIME};${CRIT_TIME} "
+        PERFDATA="${PERFDATA}'${MP}${POSTFIX}'=${time_cost}s;${WARN_TIME};${CRIT_TIME};0;${TIME_TILL_STALE} "
 }
 
 # --------------------------------------------------------------------
