@@ -253,7 +253,7 @@ done
 
 # ZFS file system have no fstab. Make on
 
-if [ -x '/sbin/zfs' ]; then
+if [ -x "$(command -v zfs)" ]; then
 	TMPTAB=$(mktemp)
 	cat ${FSTAB} > ${TMPTAB}
 	for DS in $(zfs list -H -o name); do
