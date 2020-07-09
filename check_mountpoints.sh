@@ -18,13 +18,16 @@
 # Check if all specified nfs/cifs/davfs mounts exist and if they are correct implemented.
 # That means we check /etc/fstab, the mountpoints in the filesystem and if they
 # are mounted. It is written for Linux, uses proc-Filesystem and was tested on
-# Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL/CentOS 5 6 7, FreeBSD and solaris
+# Debian, OpenSuse 10.1 10.2 10.3 11.0, SLES 10.1 11.1, RHEL/CentOS, FreeBSD and solaris
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.4
-# @date: 2017-12-03 21:25:00 CEST
+# @version: 2.5
+# @date: 2018-08-06
 #
+# changes 2.5
+#  - add -E flag to exclude path
+#  - add yas3fs
 # changes 2.4
 #  - add support for ext2
 # changes 2.3
