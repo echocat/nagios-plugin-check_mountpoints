@@ -136,6 +136,7 @@ case $KERNEL in
          FSTAB=/etc/vfstab
          MTAB=/etc/mnttab
          GREP=ggrep
+         STAT=stat
          ;;
   HP-UX) FSF=3
          MF=2
@@ -144,6 +145,7 @@ case $KERNEL in
          FSTAB=/etc/fstab
          MTAB=/dev/mnttab
          GREP=grep
+         STAT=stat
          ;;
   FreeBSD) FSF=3
          MF=2
@@ -152,6 +154,7 @@ case $KERNEL in
          FSTAB=/etc/fstab
          MTAB=none
          GREP=grep
+         STAT=stat
 	 ;;
   *)     FSF=3
          MF=2
@@ -160,6 +163,7 @@ case $KERNEL in
          FSTAB=/etc/fstab
          MTAB=/proc/mounts
          GREP=grep
+         STAT=stat
          ;;
 esac
 
@@ -195,6 +199,7 @@ function usage() {
         echo " -o          When autoselecting mounts from fstab, ignore mounts having noauto flag. (default: unset)"
         echo " -w          Writetest. Touch file \$mountpoint/.mount_test_from_\$(hostname) (default: unset)"
         echo " -e ARGS     Extra arguments for df (default: unset)"
+        echo " -t FS_TYPE  FS Type to check for using stat. Multiple values should be separated with commas (default: unset)"
         echo " MOUNTPOINTS list of mountpoints to check. Ignored when -a is given"
 }
 
@@ -251,6 +256,7 @@ do
                 -w) WRITETEST=1; shift;;
                 -L) LINKOK=1; shift;;
                 -e) DFARGS=$2; shift 2;; 
+                -t) FSTYPE=$2; shift 2;;
                 /*) MPS="${MPS} $1"; shift;;
                 *) usage; exit $STATE_UNKNOWN;;
         esac
@@ -326,6 +332,13 @@ if [ ! -e "${MTAB}" ]; then
         exit $STATE_CRITICAL
 fi
 
+if [ -n "${FSTYPE}" ]; then
+        # split on commas
+        oIFS=$IFS
+        IFS=, read -a fstypes <<<"${FSTYPE}"
+        IFS=$oIFS
+fi
+
 # --------------------------------------------------------------------
 # now we check if the given parameters ...
 #  1) ... exist in the /etc/fstab
@@ -334,6 +347,7 @@ fi
 #  4) ... exist on the filesystem
 #  5) ... is writable (optional)
 # --------------------------------------------------------------------
+mpidx=0
 for MP in ${MPS} ; do
         ## If its an OpenVZ Container or -a Mode is selected skip fstab check.
         ## -a Mode takes mounts from fstab, we do not have to check if they exist in fstab ;)
@@ -413,6 +427,29 @@ for MP in ${MPS} ; do
                 fi
         fi
 
+        # Check for FS type using stat
+        efstype=${fstypes[$mpidx]}
+        ((mpidx++))
+
+        if [ -z "${efstype}" ]
+        then
+            continue
+        fi
+
+        rfstype=$(${STAT} -f --printf='%T' "${MP}")
+        if [ $? -ne 0 ]
+        then
+            log "CRIT: Fail to fetch FS type for ${MP}"
+            ERR_MESG[${#ERR_MESG[*]}]="Fail to fetch FS type for ${MP}"
+            continue
+        fi
+
+        if [ "${rfstype}" != "${efstype}" ]
+        then
+            log "CRIT: Bad FS type for ${MP}"
+            ERR_MESG[${#ERR_MESG[*]}]="Bad FS type for ${MP}. Got '${rfstype}' while '${efstype}' was expected"
+            continue
+        fi
 done
 
 # Remove temporary files
