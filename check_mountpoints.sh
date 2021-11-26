@@ -5,7 +5,7 @@
 #
 # Version: MPL 2.0
 #
-# echocat check_mountpoints.sh, Copyright (c) 2011-2020 echocat
+# echocat check_mountpoints.sh, Copyright (c) 2011-2021 echocat
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -22,7 +22,7 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.5
+# @version: 2.6
 # @date: 2021-11-26
 #
 # changes 2.6
