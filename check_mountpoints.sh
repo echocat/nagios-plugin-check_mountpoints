@@ -23,8 +23,10 @@
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
 # @version: 2.5
-# @date: 2018-08-06
+# @date: 2021-11-26
 #
+# changes 2.6
+#  - check only dataset type filesystem on zfs
 # changes 2.5
 #  - add -E flag to exclude path
 #  - add yas3fs
@@ -259,7 +261,7 @@ done
 if [ -x '/sbin/zfs' ]; then
 	TMPTAB=$(mktemp)
 	cat ${FSTAB} > ${TMPTAB}
-	for DS in $(zfs list -H -o name); do
+	for DS in $(zfs list -H -o name -t filesystem); do
 		MP=$(zfs get -H mountpoint ${DS} |awk '{print $3}')
 		# mountpoint ~ "none|legacy|-"
 		if [ ! -d "$MP" ]; then
