@@ -22,9 +22,11 @@
 #
 # @author: Daniel Werdermann / dwerdermann@web.de
 # @projectsite: https://github.com/echocat/nagios-plugin-check_mountpoints
-# @version: 2.6
+# @version: 2.7
 # @date: 2021-11-26
 #
+# changes 2.7
+#  - new flag -f to check for fs type
 # changes 2.6
 #  - check only dataset type filesystem on zfs
 # changes 2.5
@@ -207,7 +209,7 @@ function print_help() {
         echo ""
         usage
         echo ""
-        echo "Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted."
+        echo "Check if nfs/cifs/davfs/zfs/btrfs mountpoints are correctly implemented and mounted."
         echo ""
         echo "This plugin is NOT developped by the Nagios Plugin group."
         echo "Please do not e-mail them for support on this plugin, since"
